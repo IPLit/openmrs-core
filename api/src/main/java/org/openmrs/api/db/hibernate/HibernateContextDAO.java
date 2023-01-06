@@ -575,4 +575,19 @@ public class HibernateContextDAO implements ContextDAO {
 			throw new RuntimeException("Unable to retrieve a database connection", e);
 		}
 	}
+
+	// MT IPLit
+	public List<String> getDatabasesList() {
+		try {
+			Session session = sessionFactory.getCurrentSession();
+			List<String> databases = session
+					.createNativeQuery("select schema_name from information_schema.schemata where schema_name like 'openmrs%';")
+					.addScalar("schema_name", StandardBasicTypes.STRING).list();
+			//log.error("All databases size: " + databases.size());
+			return databases;
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to retrieve list of databases", e);
+		}
+	}
+
 }

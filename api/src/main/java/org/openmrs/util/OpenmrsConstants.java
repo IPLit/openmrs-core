@@ -1314,6 +1314,11 @@ public final class OpenmrsConstants {
 	
 	/** Value for the long person name format */
 	public static final String PERSON_NAME_FORMAT_LONG = "long";
+
+	// MT IPLit
+	public static final String TENANT_HEADER_NAME = "X-TenantID";
+
+	public static final String TENANT_DB_PREFIX = "openmrs_";
 	
 	private OpenmrsConstants() {
 	}

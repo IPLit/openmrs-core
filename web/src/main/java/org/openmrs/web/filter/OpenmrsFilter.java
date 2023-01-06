@@ -17,10 +17,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.lang3.StringUtils;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UserContext;
 import org.openmrs.util.OpenmrsClassLoader;
+import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +39,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class OpenmrsFilter extends OncePerRequestFilter {
 	
 	private static final Logger log = LoggerFactory.getLogger(OpenmrsFilter.class);
-	
+
 	/**
 	 * @see javax.servlet.Filter#destroy()
 	 */
@@ -58,23 +60,42 @@ public class OpenmrsFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest httpRequest, HttpServletResponse httpResponse, FilterChain chain)
 	        throws ServletException, IOException {
 		
-		HttpSession httpSession = httpRequest.getSession();
-		
+		HttpSession httpSession = httpRequest.getSession(true);
+
 		// used by htmlInclude tag
 		httpRequest.setAttribute(WebConstants.INIT_REQ_UNIQUE_ID, String.valueOf(System.currentTimeMillis()));
-		
+
 		log.debug("requestURI {}", httpRequest.getRequestURI());
 		log.debug("requestURL {}", httpRequest.getRequestURL());
 		log.debug("request path info {}", httpRequest.getPathInfo());
-		
+
 		// User context is created if it doesn't already exist and added to the session
 		// note: this usercontext storage logic is copied to webinf/view/uncaughtexception.jsp to 
 		// 		 prevent stack traces being shown to non-authenticated users
 		UserContext userContext = (UserContext) httpSession.getAttribute(WebConstants.OPENMRS_USER_CONTEXT_HTTPSESSION_ATTR);
-		
+
 		// default the session username attribute to anonymous
 		httpSession.setAttribute("username", "-anonymous user-");
-		
+
+		// MT IPLit
+		String tenantID = httpRequest.getHeader(OpenmrsConstants.TENANT_HEADER_NAME);
+		log.debug("Header tenantId: "+ tenantID);
+		String tenantIdSession = null;
+		if (StringUtils.isBlank(tenantID)) {
+			tenantID = "";
+			tenantIdSession = (String) httpSession.getAttribute(OpenmrsConstants.TENANT_HEADER_NAME);
+		} else {
+			tenantIdSession = (String) httpSession.getAttribute(OpenmrsConstants.TENANT_HEADER_NAME);
+			if (!tenantID.trim().equals(OpenmrsConstants.DATABASE_NAME)) {
+				tenantID = OpenmrsConstants.TENANT_DB_PREFIX + tenantID.trim();
+			}
+		}
+		if (StringUtils.isNotBlank(tenantID)) {
+			if (StringUtils.isBlank(tenantIdSession) || (!tenantID.equals(tenantIdSession))) {
+				httpSession.setAttribute(OpenmrsConstants.TENANT_HEADER_NAME, tenantID);
+			}
+		}
+
 		// if there isn't a userContext on the session yet, create one
 		// and set it onto the session
 		if (userContext == null) {
@@ -90,10 +111,10 @@ public class OpenmrsFilter extends OncePerRequestFilter {
 				httpSession.setAttribute("username", user.getUsername());
 			}
 		}
-		
+
 		// set the locale on the session (for the servlet container as well)
 		httpSession.setAttribute("locale", userContext.getLocale());
-		
+
 		//TODO We do not cache the csrfguard javascript file because it contains the
 		//csrf token that is dynamically embedded in forms. For this to work,
 		//the OpenmrsFilter should be before the CSRFGuard filter in web.xml
@@ -102,11 +123,12 @@ public class OpenmrsFilter extends OncePerRequestFilter {
 			httpResponse.setHeader("Pragma", "no-cache"); // HTTP 1.0.
 			httpResponse.setHeader("Expires", "0"); // Proxies.
 		}
-		
-		// Add the user context to the current thread 
+
+		// Add the user context to the current thread
 		Context.setUserContext(userContext);
+
 		Thread.currentThread().setContextClassLoader(OpenmrsClassLoader.getInstance());
-		
+
 		log.debug("before chain.Filter");
 		
 		// continue the filter chain (going on to spring, authorization, etc)
@@ -118,7 +140,6 @@ public class OpenmrsFilter extends OncePerRequestFilter {
 		}
 		
 		log.debug("after chain.doFilter");
-		
 	}
-	
+
 }

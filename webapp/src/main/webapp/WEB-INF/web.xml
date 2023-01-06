@@ -65,6 +65,14 @@
 	<listener>
 		<listener-class>org.springframework.web.util.IntrospectorCleanupListener</listener-class>
 	</listener>
+
+	<!-- MT IPLit -->
+	<listener>
+	    <description>Servlet listener that exposes the request to the current thread</description>
+	    <display-name>RequestContextListener</display-name>
+	    <listener-class>org.springframework.web.context.request.RequestContextListener</listener-class>
+	</listener>
+	<!-- MT IPLit -->
 	
 	<listener>
 		<listener-class>org.openmrs.web.Listener</listener-class>

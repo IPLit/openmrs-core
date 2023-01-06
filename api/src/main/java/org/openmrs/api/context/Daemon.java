@@ -77,19 +77,26 @@ public class Daemon {
 	        final AbstractRefreshableApplicationContext applicationContext) throws ModuleException {
 		// create a new thread and execute that task in it
 		DaemonThread startModuleThread = new DaemonThread() {
-			
+
+			boolean sessionCreated = false;
+
 			@Override
 			public void run() {
 				isDaemonThread.set(true);
 				try {
-					Context.openSession();
+					if (!Context.isSessionOpen()) {	// MT IPLit
+						Context.openSession();
+						sessionCreated = true;
+					}
 					returnedObject = ModuleFactory.startModuleInternal(module, isOpenmrsStartup, applicationContext);
 				}
 				catch (Exception e) {
 					exceptionThrown = e;
 				}
 				finally {
-					Context.closeSession();
+					if (sessionCreated) {	// MT IPLit
+						Context.closeSession();
+					}
 				}
 			}
 		};
@@ -139,11 +146,15 @@ public class Daemon {
 		// create a new thread and execute that task in it
 		DaemonThread createUserThread = new DaemonThread() {
 
+			boolean sessionCreated = false;
 			@Override
 			public void run() {
 				isDaemonThread.set(true);
 				try {
-					Context.openSession();
+					if (!Context.isSessionOpen()) {
+						Context.openSession();
+						sessionCreated = true;
+					}
 
 					if ( (user.getId() != null && Context.getUserService().getUser(user.getId()) != null) || Context.getUserService().getUserByUuid(user.getUuid()) != null || Context.getUserService().getUserByUsername(user.getUsername()) != null || (user.getEmail() != null && Context.getUserService().getUserByUsernameOrEmail(user.getEmail()) != null) ) {
 						throw new APIException("User.creating.already.exists", new Object[] { user.getDisplayString() });
@@ -160,7 +171,9 @@ public class Daemon {
 					exceptionThrown = e;
 				}
 				finally {
-					Context.closeSession();
+					if (sessionCreated) {
+						Context.closeSession();
+					}
 				}
 			}
 		};
@@ -201,20 +214,27 @@ public class Daemon {
 		
 		// now create a new thread and execute that task in it
 		DaemonThread executeTaskThread = new DaemonThread() {
-			
+
+			boolean sessionCreated = false;
+
 			@Override
 			public void run() {
 				isDaemonThread.set(true);
 				
 				try {
-					Context.openSession();
+					if (!Context.isSessionOpen()) {
+						Context.openSession();
+						sessionCreated = true;
+					}
 					TimerSchedulerTask.execute(task);
 				}
 				catch (Exception e) {
 					exceptionThrown = e;
 				}
 				finally {
-					Context.closeSession();
+					if (sessionCreated) {
+						Context.closeSession();
+					}
 				}
 				
 			}
@@ -256,17 +276,23 @@ public class Daemon {
 		// we should consider making DaemonThread public, so the caller can access returnedObject and exceptionThrown
 		DaemonThread thread = new DaemonThread() {
 			
+			boolean sessionCreated =false;
 			@Override
 			public void run() {
 				isDaemonThread.set(true);
 				try {
-					Context.openSession();
+					if (!Context.isSessionOpen()) {
+						Context.openSession();
+						sessionCreated = true;
+					}
 					//Suppressing sonar issue "squid:S1217"
 					//We intentionally do not start a new thread yet, rather wrap the run call in a session.
 					runnable.run();
 				}
 				finally {
-					Context.closeSession();
+					if (sessionCreated) {
+						Context.closeSession();
+					}
 				}
 			}
 		};
@@ -300,18 +326,24 @@ public class Daemon {
 		
 		DaemonThread onStartupThread = new DaemonThread() {
 			
+			boolean sessionCreated = false;
 			@Override
 			public void run() {
 				isDaemonThread.set(true);
 				try {
-					Context.openSession();
+					if (!Context.isSessionOpen()) {
+						Context.openSession();
+						sessionCreated = true;
+					}
 					service.onStartup();
 				}
 				catch (Exception e) {
 					exceptionThrown = e;
 				}
 				finally {
-					Context.closeSession();
+					if (sessionCreated) {
+						Context.closeSession();
+					}
 				}
 			}
 		};
@@ -352,17 +384,23 @@ public class Daemon {
 		
 		DaemonThread thread = new DaemonThread() {
 			
+			boolean sessionCreated = false;
 			@Override
 			public void run() {
 				isDaemonThread.set(true);
 				try {
-					Context.openSession();
+					if (!Context.isSessionOpen()) {
+						Context.openSession();
+						sessionCreated = true;
+					}
 					//Suppressing sonar issue "squid:S1217"
 					//We intentionally do not start a new thread yet, rather wrap the run call in a session.
 					runnable.run();
 				}
 				finally {
-					Context.closeSession();
+					if (sessionCreated) {
+						Context.closeSession();
+					}
 				}
 			}
 		};
