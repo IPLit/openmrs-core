@@ -184,4 +184,8 @@ public interface ContextDAO {
 	 * @since 2.5.7
 	 */
 	public Connection getDatabaseConnection();
+
+	// MT IPLit
+	public List<String> getDatabasesList();
+
 }

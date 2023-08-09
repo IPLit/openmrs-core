@@ -84,6 +84,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 /**
  * Represents an OpenMRS <code>Context</code>, which may be used to authenticate to the database and
@@ -151,6 +152,8 @@ public class Context {
 	private static Properties configProperties = new Properties();
 
 	private static AuthenticationScheme authenticationScheme;
+
+
 
 	/**
 	 * Default public constructor
@@ -1420,4 +1423,17 @@ public class Context {
 	public static Connection getDatabaseConnection() {
 		return getContextDAO().getDatabaseConnection();
 	}
+
+	// MT IPLit
+	public static List<String> getDatabasesList() {
+		List<String> dbNames = getContextDAO().getDatabasesList();
+		dbNames = dbNames.stream().map(dbName -> {
+			if (!dbName.equals(OpenmrsConstants.DATABASE_NAME)) {
+				dbName = dbName.replace(OpenmrsConstants.TENANT_DB_PREFIX, "");
+			}
+			return dbName;
+		}).collect(Collectors.toList());
+		return dbNames;
+	}
+
 }

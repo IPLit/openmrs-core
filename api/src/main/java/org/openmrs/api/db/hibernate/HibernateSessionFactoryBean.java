@@ -38,10 +38,13 @@ import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 
+
 public class HibernateSessionFactoryBean extends LocalSessionFactoryBean implements Integrator {
 	
 	private static final Logger log = LoggerFactory.getLogger(HibernateSessionFactoryBean.class);
 	
+	private static Properties connPropMT = null;
+
 	protected Set<String> mappingResources = new HashSet<>();
 	
 	/**
@@ -58,7 +61,7 @@ public class HibernateSessionFactoryBean extends LocalSessionFactoryBean impleme
 	public Map<String, Interceptor> interceptors = new HashMap<>();
 	
 	private Metadata metadata;
-	
+
 	/**
 	 * Collect the mapping resources for future use because the mappingResources object is defined
 	 * as 'private' instead of 'protected'
@@ -153,7 +156,11 @@ public class HibernateSessionFactoryBean extends LocalSessionFactoryBean impleme
 					config.put(prop.getKey(), prop.getValue());
 				}
 			}
-			
+
+			// MT IPLit
+		    /*config.put(Environment.MULTI_TENANT, "DATABASE");
+		    config.put(Environment.MULTI_TENANT_CONNECTION_PROVIDER, "org.openmrs.api.db.hibernate.DataSourceBasedMultiTenantConnectionProvider");
+		    config.put(Environment.MULTI_TENANT_IDENTIFIER_RESOLVER, "org.openmrs.web.MultiTenantIdentifierResolver");*/
 		}
 		catch (IOException e) {
 			log.error(MarkerFactory.getMarker("FATAL"), "Unable to load default hibernate properties", e);
@@ -184,9 +191,15 @@ public class HibernateSessionFactoryBean extends LocalSessionFactoryBean impleme
 		setMappingResources(getModuleMappingResources().toArray(new String[0]));
 		
 		setPackagesToScan(getModulePackagesWithMappedClasses().toArray(new String[0]));
-		
+
+		// MT IPLit
+		//setMultiTenantConnectionProvider(dataSourceBasedMultiTenantConnectionProvider);
+		//setCurrentTenantIdentifierResolver(multiTenantIdentifierResolver);
+		setConnPropMT(config);
+		setHibernateProperties(config);
+
 		setHibernateIntegrators(this);
-		
+
 		super.afterPropertiesSet();
 	}
 	
@@ -221,4 +234,17 @@ public class HibernateSessionFactoryBean extends LocalSessionFactoryBean impleme
 	public Metadata getMetadata() {
 		return metadata;
 	}
+
+	// MT IPLit
+	public static Properties getConnPropMT() {
+		Properties props = new Properties();
+		props.putAll(connPropMT);
+		return props;
+	}
+
+	public void setConnPropMT(Properties props) {
+		connPropMT = new Properties();
+		connPropMT.putAll(props);
+	}
+
 }

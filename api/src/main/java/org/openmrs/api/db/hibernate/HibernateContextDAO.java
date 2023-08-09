@@ -65,12 +65,14 @@ public class HibernateContextDAO implements ContextDAO {
 	 * Hibernate session factory
 	 */
 	private SessionFactory sessionFactory;
-	
+
 	@Autowired
 	private FullTextSessionFactory fullTextSessionFactory;
-	
+
 	private UserDAO userDao;
-	
+
+	@Autowired
+	private DataSourceBasedMultiTenantConnectionProvider dataSourceBasedMultiTenantConnectionProvider;
 	/**
 	 * Session factory to use for this DAO. This is usually injected by spring and its application
 	 * context.
@@ -456,6 +458,7 @@ public class HibernateContextDAO implements ContextDAO {
 	public void updateSearchIndexForType(Class<?> type) {
 		//From http://docs.jboss.org/hibernate/search/3.3/reference/en-US/html/manual-index-changes.html#search-batchindex-flushtoindexes
 		FullTextSession session = fullTextSessionFactory.getFullTextSession();
+
 		session.purgeAll(type);
 		
 		//Prepare session for batch work
@@ -524,8 +527,13 @@ public class HibernateContextDAO implements ContextDAO {
 	@Override
 	public void updateSearchIndex() {
 		try {
-			log.info("Updating the search index... It may take a few minutes.");
+			// MT IPLit
+			Session s = sessionFactory.getCurrentSession();
+			String tenantIdentifier = s.getTenantIdentifier();
+			log.info("Updating the search index... It may take a few minutes. For " + tenantIdentifier);
+
 			fullTextSessionFactory.getFullTextSession().createIndexer().startAndWait();
+
 			GlobalProperty gp = Context.getAdministrationService().getGlobalPropertyObject(
 			    OpenmrsConstants.GP_SEARCH_INDEX_VERSION);
 			if (gp == null) {
@@ -546,7 +554,11 @@ public class HibernateContextDAO implements ContextDAO {
 	@Override
 	public Future<?> updateSearchIndexAsync() {
 		try {
-			log.info("Started asynchronously updating the search index...");
+			// MT IPLit
+			Session s = sessionFactory.getCurrentSession();
+			String tenantIdentifier = s.getTenantIdentifier();
+			log.info("Started asynchronously updating the search index...for " + tenantIdentifier);
+
 			return fullTextSessionFactory.getFullTextSession().createIndexer().start();
 		}
 		catch (Exception e) {
@@ -559,10 +571,29 @@ public class HibernateContextDAO implements ContextDAO {
 	 */
 	public Connection getDatabaseConnection() {
 		try {
-			return SessionFactoryUtils.getDataSource(sessionFactory).getConnection();
+			//return SessionFactoryUtils.getDataSource(sessionFactory).getConnection();
+			// MT IPLit
+			Session s = sessionFactory.getCurrentSession();
+			String tenantIdentifier = s.getTenantIdentifier();
+			log.info("getDatabaseConnection returning db connection...for " + tenantIdentifier);
+			return dataSourceBasedMultiTenantConnectionProvider.getConnectionProvider(tenantIdentifier).getConnection();
 		}
 		catch (SQLException e) {
 			throw new RuntimeException("Unable to retrieve a database connection", e);
 		}
 	}
+
+	// MT IPLit
+	public List<String> getDatabasesList() {
+		try {
+			Session session = sessionFactory.getCurrentSession();
+			List<String> databases = session
+					.createNativeQuery("select schema_name from information_schema.schemata where schema_name like 'openmrs%';")
+					.addScalar("schema_name", StandardBasicTypes.STRING).list();
+			return databases;
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to retrieve list of databases", e);
+		}
+	}
+
 }

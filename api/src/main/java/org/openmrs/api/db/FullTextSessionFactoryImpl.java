@@ -9,6 +9,7 @@
  */
 package org.openmrs.api.db;
 
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.Search;
@@ -30,7 +31,11 @@ public class FullTextSessionFactoryImpl implements FullTextSessionFactory {
 	 */
 	@Override
 	public FullTextSession getFullTextSession() {
-		FullTextSession delegateSession = Search.getFullTextSession(sessionFactory.getCurrentSession());
+		// MT IPLit
+		// FullTextSession delegateSession = Search.getFullTextSession(sessionFactory.getCurrentSession());
+		Session s = sessionFactory.getCurrentSession();
+		String tenantIdentifier = s.getTenantIdentifier();
+		FullTextSession delegateSession = Search.getFullTextSession(sessionFactory.withOptions().tenantIdentifier(tenantIdentifier).openSession());
 		return new DelegatingFullTextSession(delegateSession, eventPublisher);
 	}
 	

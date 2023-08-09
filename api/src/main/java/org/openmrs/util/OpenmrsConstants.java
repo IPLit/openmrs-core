@@ -1300,6 +1300,10 @@ public final class OpenmrsConstants {
 	/** Value for the long person name format */
 	public static final String PERSON_NAME_FORMAT_LONG = "long";
 	
+	public static final String TENANT_HEADER_NAME = "X-Tenant-Id";
+
+	public static final String TENANT_DB_PREFIX = "openmrs_";
+
 	private OpenmrsConstants() {
 	}
 	
